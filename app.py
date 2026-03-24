@@ -7,6 +7,43 @@ load_dotenv()
 
 app = Flask(__name__)
 
+# Diccionario color completo -> abreviación BD
+COLOR_MAP = {
+    'AMARILLO': 'AM', 'AMARILLA': 'AM',
+    'AZUL': 'AZ',
+    'BLANCO': 'BL', 'BLANCA': 'BL',
+    'DORADO': 'DO', 'DORADA': 'DO', 'ORO': 'DO',
+    'GRIS': 'GR',
+    'LILA': 'LI', 'LILA': 'LI',
+    'MORADO': 'MO', 'MORADA': 'MO', 'PURPURA': 'MO',
+    'NATURAL': 'NA',
+    'NEGRO': 'NG', 'NEGRA': 'NG',
+    'NARANJA': 'OR', 'ORANGE': 'OR',
+    'ROJO': 'RO', 'ROJA': 'RO',
+    'ROSADO': 'RS', 'ROSA': 'RS',
+    'TITANIO DESERT': 'TTD', 'DESERT': 'TTD',
+    'TITANIO NATURAL': 'TTN', 'TITANIO': 'TTN',
+    'VERDE': 'VE',
+}
+
+# Diccionario estado completo -> abreviación BD
+ESTADO_MAP = {
+    'A': 'A', 'ACTIVO': 'A', 'EXCELENTE': 'A',
+    'AA': 'AA', 'COMO NUEVO': 'AA',
+    'B': 'B', 'BUENO': 'B', 'USADO': 'B',
+    'B1': 'B1',
+    'C': 'C', 'REGULAR': 'C',
+    'NU': 'NU', 'NUEVO': 'NU', 'N': 'NU',
+}
+
+def traducir_color(color):
+    c = color.strip().upper()
+    return COLOR_MAP.get(c, c)  # si no encuentra, devuelve el mismo valor
+
+def traducir_estado(estado):
+    e = estado.strip().upper()
+    return ESTADO_MAP.get(e, e)
+
 def get_connection():
     conn_str = (
         f"DRIVER={{ODBC Driver 18 for SQL Server}};"
@@ -22,37 +59,38 @@ def get_connection():
 def get_stock(sku):
     try:
         parts = sku.split('-')
-        referencia = parts[0]
-        estado = parts[1]
-        color = parts[2]
-        
+        referencia = parts[0].strip()
+        estado = traducir_estado(parts[1])
+        color = traducir_color(parts[2])
+
         conn = get_connection()
         cursor = conn.cursor()
-        
+
         query = """
         SELECT COUNT(s.SERIE) AS STOCK, MAX(s.VALOR) AS PRECIO
         FROM MTSERIES s WITH (NOLOCK)
         INNER JOIN XMYCT_TECNICO_SERIES ts WITH (NOLOCK) ON s.SERIE = ts.XSERIE
         WHERE s.EXISTE = 1
         AND s.BODEGA IN ('BM', 'TM', 'TB', 'BB', 'BCAL', 'BNQS')
-        AND s.CODIGO LIKE ? + '%'
-        AND ts.XESTADO = ?
-        AND ts.XCOLOR = ?
+        AND RTRIM(s.CODIGO) LIKE ? + '%'
+        AND RTRIM(ts.XESTADO) = ?
+        AND RTRIM(ts.XCOLOR) = ?
         """
-        
+
         cursor.execute(query, (referencia, estado, color))
         row = cursor.fetchone()
-        
+
         result = {
+            'SKU': sku,
             'STOCK': row[0],
             'PRECIO': float(row[1]) if row[1] else 0
         }
-        
+
         cursor.close()
         conn.close()
-        
+
         return jsonify(result)
-    
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -63,13 +101,13 @@ def get_all_stock():
         cursor = conn.cursor()
 
         query = """
-        SELECT s.CODIGO, ts.XESTADO, ts.XCOLOR, COUNT(s.SERIE) AS STOCK, MAX(s.VALOR) AS PRECIO
+        SELECT RTRIM(s.CODIGO), RTRIM(ts.XESTADO), RTRIM(ts.XCOLOR), COUNT(s.SERIE) AS STOCK, MAX(s.VALOR) AS PRECIO
         FROM MTSERIES s WITH (NOLOCK)
         INNER JOIN XMYCT_TECNICO_SERIES ts WITH (NOLOCK) ON s.SERIE = ts.XSERIE
         WHERE s.EXISTE = 1
         AND s.BODEGA IN ('BM', 'TM', 'TB', 'BB', 'BCAL', 'BNQS')
-        GROUP BY s.CODIGO, ts.XESTADO, ts.XCOLOR
-        ORDER BY s.CODIGO
+        GROUP BY RTRIM(s.CODIGO), RTRIM(ts.XESTADO), RTRIM(ts.XCOLOR)
+        ORDER BY RTRIM(s.CODIGO)
         """
 
         cursor.execute(query)
