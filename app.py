@@ -56,5 +56,37 @@ def get_stock(sku):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/stock', methods=['GET'])
+def get_all_stock():
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        query = """
+        SELECT s.CODIGO, ts.XESTADO, ts.XCOLOR, COUNT(s.SERIE) AS STOCK, MAX(s.VALOR) AS PRECIO
+        FROM MTSERIES s WITH (NOLOCK)
+        INNER JOIN XMYCT_TECNICO_SERIES ts WITH (NOLOCK) ON s.SERIE = ts.XSERIE
+        WHERE s.EXISTE = 1
+        AND s.BODEGA IN ('BM', 'TM', 'TB', 'BB', 'BCAL', 'BNQS')
+        GROUP BY s.CODIGO, ts.XESTADO, ts.XCOLOR
+        ORDER BY s.CODIGO
+        """
+
+        cursor.execute(query)
+        rows = cursor.fetchall()
+
+        result = [
+            {'CODIGO': r[0], 'ESTADO': r[1], 'COLOR': r[2], 'STOCK': r[3], 'PRECIO': float(r[4]) if r[4] else 0}
+            for r in rows
+        ]
+
+        cursor.close()
+        conn.close()
+
+        return jsonify(result)
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
