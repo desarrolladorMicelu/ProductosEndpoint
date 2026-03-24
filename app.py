@@ -1,5 +1,5 @@
 import os
-import pymssql
+import pyodbc
 from flask import Flask, jsonify
 from dotenv import load_dotenv
 
@@ -8,12 +8,15 @@ load_dotenv()
 app = Flask(__name__)
 
 def get_connection():
-    return pymssql.connect(
-        server=os.getenv('SQLSERVER_HOST'),
-        database=os.getenv('SQLSERVER_DB'),
-        user=os.getenv('SQLSERVER_USER'),
-        password=os.getenv('SQLSERVER_PASSWORD')
+    conn_str = (
+        f"DRIVER={{ODBC Driver 18 for SQL Server}};"
+        f"SERVER={os.getenv('SQLSERVER_HOST')};"
+        f"DATABASE={os.getenv('SQLSERVER_DB')};"
+        f"UID={os.getenv('SQLSERVER_USER')};"
+        f"PWD={os.getenv('SQLSERVER_PASSWORD')};"
+        f"TrustServerCertificate=yes;"
     )
+    return pyodbc.connect(conn_str)
 
 @app.route('/stock/<sku>', methods=['GET'])
 def get_stock(sku):
