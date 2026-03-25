@@ -126,5 +126,39 @@ def get_all_stock():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/stock/con-precio', methods=['GET'])
+def get_stock_con_precio():
+    try:
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        query = """
+        SELECT RTRIM(s.CODIGO), RTRIM(ts.XESTADO), RTRIM(ts.XCOLOR), COUNT(s.SERIE) AS STOCK, MAX(s.VALOR) AS PRECIO
+        FROM MTSERIES s WITH (NOLOCK)
+        INNER JOIN XMYCT_TECNICO_SERIES ts WITH (NOLOCK) ON s.SERIE = ts.XSERIE
+        WHERE s.EXISTE = 1
+        AND s.BODEGA IN ('BM', 'TM', 'TB', 'BB', 'BCAL', 'BNQS')
+        AND s.VALOR > 0
+        GROUP BY RTRIM(s.CODIGO), RTRIM(ts.XESTADO), RTRIM(ts.XCOLOR)
+        HAVING MAX(s.VALOR) > 0
+        ORDER BY RTRIM(s.CODIGO)
+        """
+
+        cursor.execute(query)
+        rows = cursor.fetchall()
+
+        result = [
+            {'CODIGO': r[0], 'ESTADO': r[1], 'COLOR': r[2], 'STOCK': r[3], 'PRECIO': float(r[4])}
+            for r in rows
+        ]
+
+        cursor.close()
+        conn.close()
+
+        return jsonify(result)
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
