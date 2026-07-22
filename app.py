@@ -66,8 +66,9 @@ def get_stock(sku):
         conn = get_connection()
         cursor = conn.cursor()
 
-        query = """
-        SELECT COUNT(s.SERIE) AS STOCK, MAX(s.VALOR) AS PRECIO
+        # Stock desde MTSERIES
+        query_stock = """
+        SELECT COUNT(s.SERIE) AS STOCK
         FROM MTSERIES s WITH (NOLOCK)
         INNER JOIN XMYCT_TECNICO_SERIES ts WITH (NOLOCK) ON s.SERIE = ts.XSERIE
         WHERE s.EXISTE = 1
@@ -76,14 +77,23 @@ def get_stock(sku):
         AND RTRIM(ts.XESTADO) = ?
         AND RTRIM(ts.XCOLOR) = ?
         """
+        cursor.execute(query_stock, (referencia, estado, color))
+        row_stock = cursor.fetchone()
 
-        cursor.execute(query, (referencia, estado, color))
-        row = cursor.fetchone()
+        # Precio desde MvPrecio (lista de precios real)
+        query_precio = """
+        SELECT PRECIO
+        FROM MvPrecio WITH (NOLOCK)
+        WHERE RTRIM(CODPRODUC) = ?
+        AND RTRIM(CODPRECIO) = ?
+        """
+        cursor.execute(query_precio, (referencia, estado))
+        row_precio = cursor.fetchone()
 
         result = {
             'SKU': sku,
-            'STOCK': row[0],
-            'PRECIO': float(row[1]) if row[1] else 0
+            'STOCK': row_stock[0] if row_stock else 0,
+            'PRECIO': float(row_precio[0]) if row_precio else 0
         }
 
         cursor.close()
