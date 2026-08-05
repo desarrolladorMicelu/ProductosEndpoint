@@ -68,9 +68,9 @@ def get_stock(sku):
         conn = get_connection()
         cursor = conn.cursor()
 
-        # Stock desde MTSERIES
+        # Stock y bodegas desde MTSERIES
         query_stock = """
-        SELECT COUNT(s.SERIE) AS STOCK
+        SELECT COUNT(s.SERIE) AS STOCK, STRING_AGG(RTRIM(s.BODEGA), ',') AS BODEGAS
         FROM MTSERIES s WITH (NOLOCK)
         INNER JOIN XMYCT_TECNICO_SERIES ts WITH (NOLOCK) ON s.SERIE = ts.XSERIE
         WHERE s.EXISTE = 1
@@ -92,11 +92,12 @@ def get_stock(sku):
         cursor.execute(query_precio, (referencia, estado))
         row_precio = cursor.fetchone()
 
-        result = {
-            'SKU': sku,
-            'STOCK': row_stock[0] if row_stock else 0,
-            'PRECIO': float(row_precio[0]) if row_precio else 0
-        }
+        result = OrderedDict([
+            ('SKU', sku),
+            ('STOCK', row_stock[0] if row_stock else 0),
+            ('PRECIO', float(row_precio[0]) if row_precio else 0),
+            ('BODEGAS', sorted(set(row_stock[1].split(','))) if row_stock and row_stock[1] else [])
+        ])
 
         cursor.close()
         conn.close()
