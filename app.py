@@ -1,5 +1,6 @@
 import os
 import pyodbc
+from collections import OrderedDict
 from flask import Flask, jsonify
 from dotenv import load_dotenv
 
@@ -125,11 +126,11 @@ def get_all_stock():
         rows = cursor.fetchall()
 
         result = [
-            {
-                'CODIGO': r[0], 'ESTADO': r[1], 'COLOR': r[2],
-                'STOCK': r[3], 'PRECIO': float(r[4]) if r[4] else 0,
-                'BODEGAS': sorted(set(r[5].split(','))) if r[5] else []
-            }
+            OrderedDict([
+                ('CODIGO', r[0]), ('ESTADO', r[1]), ('COLOR', r[2]),
+                ('STOCK', r[3]), ('PRECIO', float(r[4]) if r[4] else 0),
+                ('BODEGAS', sorted(set(r[5].split(','))) if r[5] else [])
+            ])
             for r in rows
         ]
 
@@ -164,11 +165,11 @@ def get_stock_con_precio():
         rows = cursor.fetchall()
 
         result = [
-            {
-                'CODIGO': r[0], 'ESTADO': r[1], 'COLOR': r[2],
-                'STOCK': r[3], 'PRECIO': float(r[4]),
-                'BODEGAS': sorted(set(r[5].split(','))) if r[5] else []
-            }
+            OrderedDict([
+                ('CODIGO', r[0]), ('ESTADO', r[1]), ('COLOR', r[2]),
+                ('STOCK', r[3]), ('PRECIO', float(r[4])),
+                ('BODEGAS', sorted(set(r[5].split(','))) if r[5] else [])
+            ])
             for r in rows
         ]
 
