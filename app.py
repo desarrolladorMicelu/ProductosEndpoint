@@ -111,7 +111,8 @@ def get_all_stock():
         cursor = conn.cursor()
 
         query = """
-        SELECT RTRIM(s.CODIGO), RTRIM(ts.XESTADO), RTRIM(ts.XCOLOR), COUNT(s.SERIE) AS STOCK, MAX(s.VALOR) AS PRECIO
+        SELECT RTRIM(s.CODIGO), RTRIM(ts.XESTADO), RTRIM(ts.XCOLOR), COUNT(s.SERIE) AS STOCK, MAX(s.VALOR) AS PRECIO,
+               STRING_AGG(RTRIM(s.BODEGA), ',') AS BODEGAS
         FROM MTSERIES s WITH (NOLOCK)
         INNER JOIN XMYCT_TECNICO_SERIES ts WITH (NOLOCK) ON s.SERIE = ts.XSERIE
         WHERE s.EXISTE = 1
@@ -124,7 +125,11 @@ def get_all_stock():
         rows = cursor.fetchall()
 
         result = [
-            {'CODIGO': r[0], 'ESTADO': r[1], 'COLOR': r[2], 'STOCK': r[3], 'PRECIO': float(r[4]) if r[4] else 0}
+            {
+                'CODIGO': r[0], 'ESTADO': r[1], 'COLOR': r[2],
+                'STOCK': r[3], 'PRECIO': float(r[4]) if r[4] else 0,
+                'BODEGAS': sorted(set(r[5].split(','))) if r[5] else []
+            }
             for r in rows
         ]
 
@@ -143,7 +148,8 @@ def get_stock_con_precio():
         cursor = conn.cursor()
 
         query = """
-        SELECT RTRIM(s.CODIGO), RTRIM(ts.XESTADO), RTRIM(ts.XCOLOR), COUNT(s.SERIE) AS STOCK, MAX(s.VALOR) AS PRECIO
+        SELECT RTRIM(s.CODIGO), RTRIM(ts.XESTADO), RTRIM(ts.XCOLOR), COUNT(s.SERIE) AS STOCK, MAX(s.VALOR) AS PRECIO,
+               STRING_AGG(RTRIM(s.BODEGA), ',') AS BODEGAS
         FROM MTSERIES s WITH (NOLOCK)
         INNER JOIN XMYCT_TECNICO_SERIES ts WITH (NOLOCK) ON s.SERIE = ts.XSERIE
         WHERE s.EXISTE = 1
@@ -158,7 +164,11 @@ def get_stock_con_precio():
         rows = cursor.fetchall()
 
         result = [
-            {'CODIGO': r[0], 'ESTADO': r[1], 'COLOR': r[2], 'STOCK': r[3], 'PRECIO': float(r[4])}
+            {
+                'CODIGO': r[0], 'ESTADO': r[1], 'COLOR': r[2],
+                'STOCK': r[3], 'PRECIO': float(r[4]),
+                'BODEGAS': sorted(set(r[5].split(','))) if r[5] else []
+            }
             for r in rows
         ]
 
